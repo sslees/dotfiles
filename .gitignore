@@ -1,0 +1,15 @@
+.gnupg/
+.ssh/
+private_keys/
+
+.env
+.env.*
+
+*.local
+*.secret
+*.secrets
+
+*.key
+*.p12
+*.pem
+*.pfx
