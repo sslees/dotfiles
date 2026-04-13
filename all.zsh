@@ -9,6 +9,8 @@ export GPG_TTY="$(tty)"
 
 # aliases
 
+alias c='clear'
+
 alias ga='git add'
 alias gaa='git add --all'
 alias gcm='git commit -m'
