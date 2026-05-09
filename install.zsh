@@ -13,9 +13,13 @@ if [[ "$OSTYPE" == darwin* ]]; then
 
   _login_shell=$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')
 elif command -v apt >/dev/null 2>&1; then
-  sudo apt install -y git gpg sheldon fzf zoxide
+  sudo apt install -y git gpg fzf zoxide
 
   export PATH="$HOME/.local/bin:$PATH"
+  if ! command -v sheldon >/dev/null 2>&1; then
+    curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh \
+      | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin
+  fi
   if ! command -v mise >/dev/null 2>&1; then
     curl https://mise.run | sh
   fi
