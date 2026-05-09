@@ -15,4 +15,6 @@ command -v fzf >/dev/null && source <(fzf --zsh)
 command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 command -v mise >/dev/null && eval "$(mise activate zsh)"
 
-[[ -f ~/.local.sh ]] && source ~/.local.sh
+if [[ -f ~/.local.sh ]]; then
+  source ~/.local.sh
+fi
