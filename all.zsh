@@ -7,6 +7,8 @@ export VISUAL="cursor -w"
 
 export GPG_TTY="$(tty)"
 
+export PIP_REQUIRE_VIRTUALENV=true
+
 # aliases
 
 alias c='clear'
