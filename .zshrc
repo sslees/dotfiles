@@ -1,7 +1,3 @@
-autoload -Uz compinit && compinit
-
-eval "$(sheldon source)"
-
 source ~/dotfiles/all.zsh
 if [[ "$OSTYPE" == darwin* ]]; then
   source ~/dotfiles/mac.zsh
@@ -11,8 +7,12 @@ elif [[ "$OSTYPE" == linux-gnu* ]]; then
   source ~/dotfiles/linux.zsh
 fi
 
-[[ -f ~/.local.sh ]] && source ~/.local.sh
+autoload -Uz compinit && compinit
+
+eval "$(sheldon source)"
 
 command -v fzf >/dev/null && source <(fzf --zsh)
 command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 command -v mise >/dev/null && eval "$(mise activate zsh)"
+
+[[ -f ~/.local.sh ]] && source ~/.local.sh
