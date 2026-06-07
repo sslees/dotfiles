@@ -50,9 +50,3 @@ alias q='exit'
 # functions
 
 function mkcd() { mkdir -p "$@" && cd "$_"; }
-
-# bindings
-
-bindkey '^[[A' history-substring-search-up
-bindkey '^[[B' history-substring-search-down
-bindkey "^U" backward-kill-line

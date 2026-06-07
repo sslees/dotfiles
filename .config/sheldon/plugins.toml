@@ -4,12 +4,20 @@ shell = "zsh"
 github = "ohmyzsh/ohmyzsh"
 use = [
   "lib/directories.zsh",
+  "lib/history.zsh",
+  "lib/completion.zsh",
   "lib/theme-and-appearance.zsh",
   "lib/async_prompt.zsh",
   "lib/git.zsh",
+  "lib/functions.zsh",
+  "lib/misc.zsh",
+  "lib/clipboard.zsh",
+  "lib/key-bindings.zsh",
   "plugins/extract/extract.plugin.zsh",
   "plugins/history/history.plugin.zsh",
   "plugins/sudo/sudo.plugin.zsh",
+  "plugins/copypath/copypath.plugin.zsh",
+  "plugins/copyfile/copyfile.plugin.zsh",
 ]
 
 [plugins.history-substring-search]

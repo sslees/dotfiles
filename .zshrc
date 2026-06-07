@@ -10,6 +10,8 @@ fi
 autoload -Uz compinit && compinit
 
 eval "$(sheldon source)"
+bindkey '^[[A' history-substring-search-up
+bindkey '^[[B' history-substring-search-down
 
 command -v fzf >/dev/null && source <(fzf --zsh)
 command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
