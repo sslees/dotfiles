@@ -49,3 +49,6 @@ pnpm-debug.log*
 .cache/
 tmp/
 temp/
+
+# Todos
+todo.md
