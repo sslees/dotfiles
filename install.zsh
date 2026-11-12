@@ -2,6 +2,27 @@
 
 setopt errexit pipefail
 
+# prompts
+
+while true; do
+  read -r '_git_remote?dotfiles git remote (https/ssh): '
+  _git_remote=${(L)_git_remote}
+  case "$_git_remote" in
+    https|ssh) break ;;
+  esac
+  echo "${0:t}: enter https or ssh." >&2
+done
+
+while true; do
+  read -r '_git_sign?sign git commits (y/n): '
+  _git_sign=${(L)_git_sign}
+  case "$_git_sign" in
+    y|yes) _git_sign=y; break ;;
+    n|no) _git_sign=n; break ;;
+  esac
+  echo "${0:t}: enter y or n." >&2
+done
+
 # packages
 
 if [[ "$OSTYPE" == darwin* ]]; then
@@ -37,18 +58,28 @@ if [[ "$_login_shell" != "$_zsh_bin" ]]; then
   chsh -s "$_zsh_bin"
 fi
 
-# ssh
+# remote
 
-if [[ ! -f ~/.ssh/id_ed25519 ]] && [[ ! -f ~/.ssh/id_rsa ]]; then
-  ssh-keygen -t ed25519 -C "$USER@$(hostname)"
+if [[ "$_git_remote" == ssh ]]; then
+  if [[ ! -f ~/.ssh/id_ed25519 ]] && [[ ! -f ~/.ssh/id_rsa ]]; then
+    ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -C "$USER@$(hostname)"
+    echo
+    echo "Add SSH key to https://github.com/settings/keys"
+    echo
+    cat ~/.ssh/id_ed25519.pub
+    echo
+  fi
+
+  if [[ "$OSTYPE" == darwin* && ! -f ~/.ssh/config ]]; then
+    printf 'Host *\n\tUseKeychain no\n' > ~/.ssh/config
+  fi
+
+  git -C ~/dotfiles remote set-url origin \
+    "$(git -C ~/dotfiles remote get-url origin | sed 's|https://github.com/|git@github.com:|')"
+else
+  git -C ~/dotfiles remote set-url origin \
+    "$(git -C ~/dotfiles remote get-url origin | sed 's|git@github.com:|https://github.com/|')"
 fi
-
-if [[ "$OSTYPE" == darwin* && ! -f ~/.ssh/config ]]; then
-  printf 'Host *\n\tUseKeychain no\n' > ~/.ssh/config
-fi
-
-git -C ~/dotfiles remote set-url origin \
-  "$(git -C ~/dotfiles remote get-url origin | sed 's|https://github.com/|git@github.com:|')"
 
 # git
 
@@ -63,37 +94,43 @@ fi
 
 git config --global advice.detachedHead false
 git config --global alias.conflicts '!git ls-files -u | cut -f 2 | sort -u'
-git config --global commit.gpgSign true
 git config --global fetch.prune true
 git config --global init.defaultBranch main
 git config --global pull.ff only
-git config --global tag.forceSignAnnotated true
 
 # gpg
 
-_gpg_new_key=0
-_gpg_key_list=$(gpg --list-secret-keys --with-colons 2>/dev/null)
-if ! grep -q '^sec:' <<< "$_gpg_key_list"; then
-  gpg --full-generate-key
+if [[ "$_git_sign" == y ]]; then
+  git config --global commit.gpgSign true
+  git config --global tag.forceSignAnnotated true
+
+  _gpg_new_key=0
   _gpg_key_list=$(gpg --list-secret-keys --with-colons 2>/dev/null)
-  _gpg_new_key=1
-fi
+  if ! grep -q '^sec:' <<< "$_gpg_key_list"; then
+    gpg --full-generate-key
+    _gpg_key_list=$(gpg --list-secret-keys --with-colons 2>/dev/null)
+    _gpg_new_key=1
+  fi
 
-_gpg_key=
-if [[ "$(grep -c '^sec:' <<< "$_gpg_key_list" || true)" -eq 1 ]]; then
-  _gpg_key=$(awk -F: '/^sec:/ {print $5; exit}' <<< "$_gpg_key_list")
-fi
+  _gpg_key=
+  if [[ "$(grep -c '^sec:' <<< "$_gpg_key_list" || true)" -eq 1 ]]; then
+    _gpg_key=$(awk -F: '/^sec:/ {print $5; exit}' <<< "$_gpg_key_list")
+  fi
 
-if ! git config --global --get user.signingkey >/dev/null 2>&1; then
-  [[ -n "$_gpg_key" ]] && git config --global user.signingkey "$_gpg_key"
-fi
+  if ! git config --global --get user.signingkey >/dev/null 2>&1; then
+    [[ -n "$_gpg_key" ]] && git config --global user.signingkey "$_gpg_key"
+  fi
 
-if [[ "$_gpg_new_key" -eq 1 ]]; then
-  echo
-  echo "Add GPG key to https://github.com/settings/keys"
-  echo
-  gpg --armor --export "$_gpg_key"
-  echo
+  if [[ "$_gpg_new_key" -eq 1 ]]; then
+    echo
+    echo "Add GPG key to https://github.com/settings/keys"
+    echo
+    gpg --armor --export "$_gpg_key"
+    echo
+  fi
+else
+  git config --global --unset commit.gpgSign 2>/dev/null || true
+  git config --global --unset tag.forceSignAnnotated 2>/dev/null || true
 fi
 
 # symlinks
