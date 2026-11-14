@@ -13,15 +13,25 @@ while true; do
   echo "${0:t}: enter https or ssh." >&2
 done
 
-while true; do
-  read -r '_git_sign?sign git commits (y/n): '
-  _git_sign=${(L)_git_sign}
-  case "$_git_sign" in
-    y|yes) _git_sign=y; break ;;
-    n|no) _git_sign=n; break ;;
-  esac
-  echo "${0:t}: enter y or n." >&2
-done
+_ask_yn() {
+  while true; do
+    read -r "$1?$2 (y/n): "
+    case "${(L)${(P)1}}" in
+      y|yes) typeset -g "$1=y"; return ;;
+      n|no) typeset -g "$1=n"; return ;;
+    esac
+    echo "${ZSH_ARGZERO:t}: enter y or n." >&2
+  done
+}
+
+_ask_yn _git_identity 'set git identity'
+_git_sign=n
+if [[ "$_git_identity" == y ]]; then
+  git config --global --get user.name >/dev/null 2>&1 || read -r '_git_name?git user.name: '
+  git config --global --get user.email >/dev/null 2>&1 || read -r '_git_email?git user.email: '
+  _ask_yn _git_sign 'sign git commits'
+fi
+_ask_yn _mise 'install mise'
 
 # packages
 
@@ -30,19 +40,23 @@ if [[ "$OSTYPE" == darwin* ]]; then
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
 
-  brew install git gpg sheldon fzf zoxide mise
+  brew install git sheldon fzf zoxide
+  [[ "$_git_sign" == y ]] && brew install gpg
+  [[ "$_mise" == y ]] && brew install mise
 
   _login_shell=$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')
 elif command -v apt >/dev/null 2>&1; then
-  sudo apt install -y git gpg fzf zoxide
+  sudo apt update
+  sudo apt install -y git fzf zoxide
+  [[ "$_git_sign" == y ]] && sudo apt install -y gpg
 
   export PATH="$HOME/.local/bin:$PATH"
   if ! command -v sheldon >/dev/null 2>&1; then
     curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh \
       | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin
   fi
-  if ! command -v mise >/dev/null 2>&1; then
-    curl https://mise.run | sh
+  if [[ "$_mise" == y ]] && ! command -v mise >/dev/null 2>&1; then
+    curl -fsSL https://mise.run | sh
   fi
 
   _login_shell=$(getent passwd "$USER" | cut -d: -f7)
@@ -53,9 +67,8 @@ fi
 
 # login shell
 
-_zsh_bin=$(command -v zsh)
-if [[ "$_login_shell" != "$_zsh_bin" ]]; then
-  chsh -s "$_zsh_bin"
+if [[ "${_login_shell:t}" != zsh ]]; then
+  chsh -s "$(command -v zsh)"
 fi
 
 # remote
@@ -83,14 +96,8 @@ fi
 
 # git
 
-if ! git config --global --get user.name >/dev/null 2>&1; then
-  read -r '_git_name?git user.name: '
-  git config --global user.name "$_git_name"
-fi
-if ! git config --global --get user.email >/dev/null 2>&1; then
-  read -r '_git_email?git user.email: '
-  git config --global user.email "$_git_email"
-fi
+[[ -n "$_git_name" ]] && git config --global user.name "$_git_name"
+[[ -n "$_git_email" ]] && git config --global user.email "$_git_email"
 
 git config --global advice.detachedHead false
 git config --global alias.conflicts '!git ls-files -u | cut -f 2 | sort -u'
@@ -135,13 +142,23 @@ fi
 
 # symlinks
 
-ln -sf ~/dotfiles/.zshrc ~
-mkdir -p ~/.config/git && ln -sf ~/dotfiles/.config/git/ignore ~/.config/git
-mkdir -p ~/.config/sheldon && ln -sf ~/dotfiles/.config/sheldon/plugins.toml ~/.config/sheldon
-mkdir -p ~/.config/mise && ln -sf ~/dotfiles/.config/mise/global.toml ~/.config/mise/config.toml
+_links=(
+  .zshrc ~/.zshrc
+  .config/git/ignore ~/.config/git/ignore
+  .config/sheldon/plugins.toml ~/.config/sheldon/plugins.toml
+)
+[[ "$_mise" == y ]] && _links+=(.config/mise/global.toml ~/.config/mise/config.toml)
+
+for _src _dst in $_links; do
+  if [[ -e "$_dst" && ! -L "$_dst" ]]; then
+    echo "${0:t}: $_dst exists and is not a symlink." >&2
+    exit 1
+  fi
+  mkdir -p "${_dst:h}" && ln -sf ~/dotfiles/"$_src" "$_dst"
+done
 
 # misc
 
-mise install
+[[ "$_mise" == y ]] && mise install
 mkdir -p ~/bin
 touch ~/.hushlogin
